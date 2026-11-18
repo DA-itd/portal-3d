@@ -297,7 +297,7 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
                 }`}
                 title={isRotating ? 'Pausar rotación automática' : 'Reanudar rotación automática'}
               >
-                {isRotating ? <RotateCw className="w-4 h-4 animate-spin" style={{ animationDuration: '8s' }} /> : <RotateCcw className="w-4 h-4" />}
+                {isRotating ? <RotateCw className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
               </button>
 
               <button
