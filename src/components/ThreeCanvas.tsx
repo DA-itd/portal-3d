@@ -427,7 +427,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
     const particleMat = new THREE.MeshBasicMaterial({
       color: 0x00e5c0,
       transparent: true,
-      opacity: 0.8
+      opacity: 0.42
     });
     const instancedParticles = new THREE.InstancedMesh(particleGeo, particleMat, particleCount);
 
@@ -572,22 +572,21 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       const elapsed = clock.getElapsedTime();
       const current = stateRef.current;
 
-      // Mouse smoothing
-      current.mouseX = THREE.MathUtils.damp(current.mouseX, current.targetMouseX, 4.0, delta);
-      current.mouseY = THREE.MathUtils.damp(current.mouseY, current.targetMouseY, 4.0, delta);
+      // Mouse smoothing (gentle damping)
+      current.mouseX = THREE.MathUtils.damp(current.mouseX, current.targetMouseX, 2.5, delta);
+      current.mouseY = THREE.MathUtils.damp(current.mouseY, current.targetMouseY, 2.5, delta);
 
-      // Auto rotation
+      // Slow, serene auto rotation (floor dais stays steady to avoid motion sickness)
       if (current.isRotating) {
-        coreGroup.rotation.y += delta * 0.45;
-        ring1Mesh.rotation.z += delta * 0.3;
-        ring2Mesh.rotation.x += delta * 0.25;
-        daisGroup.rotation.y += delta * 0.05;
+        coreGroup.rotation.y += delta * 0.1;
+        ring1Mesh.rotation.z += delta * 0.08;
+        ring2Mesh.rotation.x += delta * 0.06;
       }
 
-      // Crystal breathing pulse
-      const pulseScale = 1 + Math.sin(elapsed * 2.2) * 0.04;
+      // Subtle crystal breathing pulse
+      const pulseScale = 1 + Math.sin(elapsed * 0.9) * 0.015;
       crystalMesh.scale.set(pulseScale, pulseScale, pulseScale);
-      centerPointLight.intensity = 3.2 + Math.sin(elapsed * 3.5) * 0.8;
+      centerPointLight.intensity = 3.0 + Math.sin(elapsed * 1.2) * 0.25;
 
       // Dynamic color theme adjustment
       if (current.colorTheme === 'cyber') {
@@ -605,40 +604,42 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
         rimLight.color.setHex(0x00e5c0);
       }
 
-      // Satellite nodes animation
+      // Satellite nodes gentle float
       satelliteMeshes.forEach((item, idx) => {
-        const nodeYOffset = Math.sin(elapsed * 1.8 + idx * 1.2) * 0.18;
+        const nodeYOffset = Math.sin(elapsed * 0.75 + idx * 1.2) * 0.07;
         item.group.position.y = item.data.position[1] + nodeYOffset;
-        item.mesh.rotation.y += delta * 0.7;
-        item.mesh.rotation.x += delta * 0.35;
-        item.halo.rotation.z += delta * 1.2;
+        if (current.isRotating) {
+          item.mesh.rotation.y += delta * 0.18;
+          item.mesh.rotation.x += delta * 0.08;
+          item.halo.rotation.z += delta * 0.25;
+        }
 
         const isHovered = current.hoveredNodeId === item.id;
         const isSelected = current.activeNodeId === item.id;
 
-        const targetScale = isSelected ? 1.4 : isHovered ? 1.22 : 1.0;
+        const targetScale = isSelected ? 1.3 : isHovered ? 1.15 : 1.0;
         item.mesh.scale.setScalar(
-          THREE.MathUtils.damp(item.mesh.scale.x, targetScale, 8.0, delta)
+          THREE.MathUtils.damp(item.mesh.scale.x, targetScale, 6.0, delta)
         );
 
         // Enhance emissive on hover
-        const targetEmissive = isSelected ? 0.9 : isHovered ? 0.7 : 0.35;
+        const targetEmissive = isSelected ? 0.85 : isHovered ? 0.65 : 0.35;
         const mat = item.mesh.material as THREE.MeshStandardMaterial;
         mat.emissiveIntensity = THREE.MathUtils.damp(
           mat.emissiveIntensity,
           targetEmissive,
-          8.0,
+          6.0,
           delta
         );
       });
 
-      // Update particle stream
+      // Calm ambient particle drift
       for (let i = 0; i < particleCount; i++) {
         const p = particleSpeeds[i];
-        p.angle += delta * p.speed * 0.6;
+        p.angle += delta * p.speed * 0.14;
         const px = Math.cos(p.angle) * p.radius;
         const pz = Math.sin(p.angle) * p.radius;
-        const py = p.y + Math.sin(elapsed * 1.5 + i) * 0.3;
+        const py = p.y + Math.sin(elapsed * 0.5 + i) * 0.08;
 
         _tempPos.set(px, py, pz);
         _tempMatrix.setPosition(_tempPos);
@@ -674,13 +675,13 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
           _targetLookAt.set(0, 1.8, 0);
         }
       } else {
-        // Portal background mode: Gentle tilt and parallax following mouse
+        // Portal background mode: Very subtle, steady parallax (no dizzying zoom/tilt)
         _targetCamPos.set(
-          current.mouseX * 3.5,
-          4.5 - current.mouseY * 2.0,
-          19 + Math.sin(elapsed * 0.3) * 0.8
+          current.mouseX * 0.7,
+          4.6 - current.mouseY * 0.35,
+          20
         );
-        _targetLookAt.set(current.mouseX * 0.8, 2.0, 0);
+        _targetLookAt.set(0, 1.8, 0);
       }
 
       // Smooth camera interpolation
@@ -756,7 +757,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto"
       style={{
         zIndex: viewMode === 'space3d' ? 10 : 0,
-        opacity: viewMode === 'space3d' ? 1 : 0.88,
+        opacity: viewMode === 'space3d' ? 1 : 0.62,
         transition: 'opacity 0.6s ease'
       }}
     />
