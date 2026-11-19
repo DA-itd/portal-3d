@@ -411,12 +411,12 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
     const createNodeLabel = (planetName: string, title: string, color: string) => {
       const canvas = document.createElement('canvas');
       canvas.width = 560;
-      canvas.height = 128;
+      canvas.height = 136;
       const ctx = canvas.getContext('2d')!;
 
-      ctx.fillStyle = 'rgba(5, 8, 15, 0.86)';
+      ctx.fillStyle = 'rgba(5, 8, 15, 0.9)';
       ctx.beginPath();
-      ctx.roundRect(16, 18, 528, 90, 45);
+      ctx.roundRect(14, 14, 532, 108, 48);
       ctx.fill();
 
       ctx.strokeStyle = color;
@@ -427,11 +427,11 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       ctx.font = 'bold 26px Rajdhani, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(planetName.toUpperCase(), 280, 45);
+      ctx.fillText(planetName.toUpperCase(), 280, 44);
 
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 31px Rajdhani, sans-serif';
-      ctx.fillText(title, 280, 81);
+      ctx.fillText(title, 280, 84);
 
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
@@ -443,7 +443,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
         depthTest: false
       });
       const sprite = new THREE.Sprite(spriteMat);
-      sprite.scale.set(3.8, 0.88, 1);
+      sprite.scale.set(3.4, 0.84, 1);
       sprite.renderOrder = 10;
       return sprite;
     };
@@ -596,7 +596,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
 
       // Floating holographic label above celestial body
       const labelSprite = createNodeLabel(node.planetName, node.title, node.color);
-      labelSprite.position.y = node.radius + 1.05;
+      labelSprite.position.y = node.radius + 0.72;
       labelSprite.visible = stateRef.current.viewMode === 'space3d';
       bodyGroup.add(labelSprite);
       disposables.push(labelSprite.material);
@@ -757,7 +757,8 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       const shouldRevolve = current.isRotating && !(current.viewMode === 'space3d' && current.activeNodeId);
 
       celestialObjects.forEach((item) => {
-        item.label.visible = current.viewMode === 'space3d';
+        item.label.visible =
+          current.viewMode === 'space3d' || current.hoveredNodeId === item.id;
 
         // Serene axial spin
         if (current.isRotating) {
@@ -784,7 +785,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
         const isSelected = current.activeNodeId === item.id;
         const isCardHighlighted = current.viewMode === 'portal' && current.highlightedNodeId === item.id;
 
-        const targetScale = isSelected ? 1.18 : isHovered || isCardHighlighted ? 1.1 : 1.0;
+        const targetScale = isSelected ? 1.12 : isHovered || isCardHighlighted ? 1.08 : 1.0;
         item.planetMesh.scale.setScalar(
           THREE.MathUtils.damp(item.planetMesh.scale.x, targetScale, 5.0, delta)
         );
@@ -797,7 +798,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
           const orbMat = item.orbitRing.material as THREE.MeshBasicMaterial;
           orbMat.opacity = THREE.MathUtils.damp(
             orbMat.opacity,
-            isSelected || isCardHighlighted ? 0.55 : 0.2,
+            isSelected || isCardHighlighted ? 0.55 : 0.22,
             5.0,
             delta
           );
@@ -814,19 +815,20 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
             const pz = targetObj.group.position.z;
 
             if (targetObj.data.orbitRadius === 0) {
-              // Framing the Sun
-              _targetLookAt.set(0, -0.4, 0);
-              _targetCamPos.set(5.5, 3.2, 8.2);
+              // Framing the Sun + its top label cleanly inside the open viewport
+              _targetLookAt.set(0, 0.75, 0);
+              _targetCamPos.set(6.5, 3.8, 10.5);
             } else {
-              const dist = targetObj.data.radius * 4.5 + 2.8;
+              // Frame both planet and its floating label cleanly between Header and Bottom Dock
+              const dist = targetObj.data.radius * 5.2 + 4.4;
               const len = Math.hypot(px, pz) || 1;
               const dx = px / len;
               const dz = pz / len;
-              _targetLookAt.set(px, py - 0.35, pz);
+              _targetLookAt.set(px, py + 0.55, pz);
               _targetCamPos.set(
-                px + dx * dist + dz * 1.8,
-                py + targetObj.data.radius * 1.4 + 1.2,
-                pz + dz * dist - dx * 1.8
+                px + dx * dist + dz * 2.0,
+                py + targetObj.data.radius * 1.1 + 1.6,
+                pz + dz * dist - dx * 2.0
               );
             }
           }
@@ -841,16 +843,16 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
             current.orbitRadius * cosPhi,
             current.orbitRadius * sinPhi * cosTheta
           );
-          _targetLookAt.set(0, 0, 0);
+          _targetLookAt.set(0, 0.3, 0);
         }
       } else {
-        // Portal mode: calm angled solar-system vista behind cards
+        // Portal mode: position the Solar System in the upper-center open stage above the single card
         _targetCamPos.set(
           current.mouseX * 0.65,
-          9.2 - current.mouseY * 0.3,
-          23.5
+          8.4 - current.mouseY * 0.28,
+          25.0
         );
-        _targetLookAt.set(0, -0.8, 0);
+        _targetLookAt.set(0, -2.9, 0);
       }
 
       camera.position.x = THREE.MathUtils.damp(camera.position.x, _targetCamPos.x, 3.2, delta);
