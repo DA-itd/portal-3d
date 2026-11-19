@@ -2,6 +2,8 @@ export type ViewMode = 'portal' | 'space3d';
 
 export type ColorTheme = 'tecnm' | 'cyber' | 'gold';
 
+export type PlanetType = 'sun' | 'mercury' | 'venus' | 'earth' | 'mars';
+
 export interface ServiceModuleItem {
   id: string;
   title: string;
@@ -18,12 +20,15 @@ export interface ServiceModuleItem {
 export interface Node3DData {
   id: string;
   title: string;
+  planetName: string;
   subtitle: string;
   color: string;
   accentColor: string;
-  position: [number, number, number];
+  orbitRadius: number;
+  initialAngle: number;
+  orbitSpeed: number;
   radius: number;
-  type: 'core' | 'tutorias' | 'actualizacion' | 'estadisticas' | 'calidad' | 'siape';
+  type: PlanetType;
   description: string;
   actionUrl?: string;
   actionText?: string;
