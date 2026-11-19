@@ -2,7 +2,16 @@ export type ViewMode = 'portal' | 'space3d';
 
 export type ColorTheme = 'tecnm' | 'cyber' | 'gold';
 
-export type PlanetType = 'sun' | 'mercury' | 'venus' | 'earth' | 'mars';
+export type PlanetType =
+  | 'sun'
+  | 'mercury'
+  | 'venus'
+  | 'earth'
+  | 'mars'
+  | 'jupiter'
+  | 'saturn'
+  | 'uranus'
+  | 'neptune';
 
 export interface ServiceModuleItem {
   id: string;
