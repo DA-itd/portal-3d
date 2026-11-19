@@ -32,7 +32,12 @@ export const NODES_DATA: Node3DData[] = [
     type: 'tutorias',
     description: 'Seguimiento y registro del programa institucional de tutoría. Formatos ITD-AC-PO-04-03 y ITD-AC-PO-04-02 para coordinadores y tutores docentes.',
     actionUrl: 'https://da-itd.github.io/C/ITD-AC-PO-04-03-app.html',
-    actionText: 'Ingresar a Tutorías'
+    actionText: 'Coordinador (04-03)',
+    links: [
+      { label: 'Coordinador (04-03)', url: 'https://da-itd.github.io/C/ITD-AC-PO-04-03-app.html' },
+      { label: 'Tutor (04-02)', url: 'https://da-itd.github.io/C/tutor.html' },
+      { label: 'Estadísticas', url: 'https://da-itd.github.io/C/reportes.html' }
+    ]
   },
   {
     id: 'actualizacion',
@@ -330,6 +335,47 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
 
     scene.add(coreGroup);
 
+    // Helper to create crisp 3D holographic label sprites
+    const createNodeLabel = (title: string, color: string) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d')!;
+
+      // Pill background
+      ctx.fillStyle = 'rgba(5, 8, 15, 0.84)';
+      ctx.beginPath();
+      ctx.roundRect(16, 20, 480, 84, 42);
+      ctx.fill();
+
+      // Colored border
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Label text
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 34px Rajdhani, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(title, 256, 64);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+      const spriteMat = new THREE.SpriteMaterial({
+        map: tex,
+        transparent: true,
+        depthTest: false
+      });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.scale.set(3.4, 0.85, 1);
+      sprite.position.y = 2.05;
+      sprite.renderOrder = 10;
+      return sprite;
+    };
+
     // 8. Satellite Interactive Nodes
     const satelliteMeshes: {
       id: string;
@@ -338,6 +384,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       ring: THREE.Mesh;
       beam: THREE.Mesh;
       halo: THREE.Mesh;
+      label: THREE.Sprite;
       data: Node3DData;
     }[] = [];
 
@@ -350,21 +397,21 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       // Node crystal shape
       let sGeo: THREE.BufferGeometry;
       if (node.type === 'tutorias') {
-        sGeo = new THREE.OctahedronGeometry(node.radius, 0);
+        sGeo = new THREE.OctahedronGeometry(node.radius * 0.9, 0);
       } else if (node.type === 'actualizacion') {
-        sGeo = new THREE.DodecahedronGeometry(node.radius, 0);
+        sGeo = new THREE.DodecahedronGeometry(node.radius * 0.9, 0);
       } else if (node.type === 'estadisticas') {
-        sGeo = new THREE.BoxGeometry(node.radius * 1.4, node.radius * 1.4, node.radius * 1.4);
+        sGeo = new THREE.BoxGeometry(node.radius * 1.25, node.radius * 1.25, node.radius * 1.25);
       } else if (node.type === 'siape') {
-        sGeo = new THREE.TorusKnotGeometry(node.radius * 0.6, node.radius * 0.2, 64, 16);
+        sGeo = new THREE.TorusKnotGeometry(node.radius * 0.58, node.radius * 0.19, 64, 16);
       } else {
-        sGeo = new THREE.ConeGeometry(node.radius * 1.2, node.radius * 2, 6);
+        sGeo = new THREE.IcosahedronGeometry(node.radius * 0.92, 0);
       }
 
       const sMat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(node.color),
-        roughness: 0.2,
-        metalness: 0.75,
+        roughness: 0.22,
+        metalness: 0.72,
         emissive: new THREE.Color(node.color),
         emissiveIntensity: 0.35
       });
@@ -375,7 +422,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       raycastTargets.push(sMesh);
 
       // Orbiting energy halo ring
-      const haloGeo = new THREE.TorusGeometry(node.radius * 1.7, 0.04, 16, 48);
+      const haloGeo = new THREE.TorusGeometry(node.radius * 1.5, 0.04, 16, 48);
       const haloMat = new THREE.MeshBasicMaterial({
         color: new THREE.Color(node.accentColor),
         transparent: true,
@@ -408,6 +455,11 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       footMesh.position.y = -node.position[1] + 0.03;
       sGroup.add(footMesh);
 
+      // Floating holographic label
+      const labelSprite = createNodeLabel(node.title, node.color);
+      labelSprite.visible = stateRef.current.viewMode === 'space3d';
+      sGroup.add(labelSprite);
+
       scene.add(sGroup);
 
       satelliteMeshes.push({
@@ -417,6 +469,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
         ring: footMesh,
         beam: beamMesh,
         halo: haloMesh,
+        label: labelSprite,
         data: node
       });
     });
@@ -606,6 +659,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
 
       // Satellite nodes gentle float
       satelliteMeshes.forEach((item, idx) => {
+        item.label.visible = current.viewMode === 'space3d';
         const nodeYOffset = Math.sin(elapsed * 0.75 + idx * 1.2) * 0.07;
         item.group.position.y = item.data.position[1] + nodeYOffset;
         if (current.isRotating) {
@@ -617,7 +671,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
         const isHovered = current.hoveredNodeId === item.id;
         const isSelected = current.activeNodeId === item.id;
 
-        const targetScale = isSelected ? 1.3 : isHovered ? 1.15 : 1.0;
+        const targetScale = isSelected ? 1.25 : isHovered ? 1.15 : 1.0;
         item.mesh.scale.setScalar(
           THREE.MathUtils.damp(item.mesh.scale.x, targetScale, 6.0, delta)
         );
@@ -650,14 +704,21 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       // Camera positioning logic
       if (current.viewMode === 'space3d') {
         if (current.activeNodeId) {
-          // Focus on active node
+          // Comfortable framing distance from outward radial vector so node never fills/clips screen
           const targetNode = NODES_DATA.find((n) => n.id === current.activeNodeId);
           if (targetNode) {
-            _targetLookAt.set(...targetNode.position);
+            const nx = targetNode.position[0];
+            const ny = targetNode.position[1];
+            const nz = targetNode.position[2];
+            const horizLen = Math.hypot(nx, nz) || 1;
+            const dirX = nx / horizLen;
+            const dirZ = nz / horizLen;
+
+            _targetLookAt.set(nx, ny - 0.35, nz);
             _targetCamPos.set(
-              targetNode.position[0] * 1.6 + 1.5,
-              targetNode.position[1] + 1.2,
-              targetNode.position[2] * 1.6 + 4.5
+              nx + dirX * 6.8 + dirZ * 1.4,
+              ny + 2.0,
+              nz + dirZ * 6.8 - dirX * 1.4
             );
           }
         } else {
