@@ -44,8 +44,13 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
   soundEnabled,
   onToggleSound
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(viewMode === 'portal');
   const [activeTab, setActiveTab] = useState<'camera' | 'themes' | 'info'>('camera');
+
+  // Auto-expand when switching to 3D space, collapse cleanly in portal mode
+  useEffect(() => {
+    setIsCollapsed(viewMode === 'portal');
+  }, [viewMode]);
 
   // Keyboard shortcut 'H' to toggle collapsed drawer
   useEffect(() => {
@@ -105,7 +110,7 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
                 />
                 <div>
                   <h4 className="text-sm font-semibold text-white tracking-wide font-rajdhani text-base">
-                    {activeNode.title}
+                    <span style={{ color: activeNode.color }}>{activeNode.planetName}</span> · {activeNode.title}
                   </h4>
                   <p className="text-xs text-slate-400 max-w-md line-clamp-1">
                     {activeNode.description}
@@ -238,6 +243,9 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
                       onClick={() => {
                         sound.playSelect();
                         onSelectNodeId(node.id);
+                        if (viewMode === 'portal') {
+                          onToggleViewMode('space3d');
+                        }
                       }}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
                         activeNodeId === node.id
@@ -249,7 +257,7 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
                         className="w-2 h-2 rounded-full inline-block"
                         style={{ backgroundColor: node.color }}
                       />
-                      <span>{node.title.replace('Programa de ', '').replace('Reportes y ', '')}</span>
+                      <span>{node.planetName}</span>
                     </button>
                   ))}
                 </>
