@@ -18,6 +18,73 @@ const _pointer = new THREE.Vector2();
 const _raycaster = new THREE.Raycaster();
 const _targetCamPos = new THREE.Vector3();
 const _targetLookAt = new THREE.Vector3();
+const _tempMatrix = new THREE.Matrix4();
+const _tempPos = new THREE.Vector3();
+const _tempQuat = new THREE.Quaternion();
+const _tempEuler = new THREE.Euler();
+const _tempScale = new THREE.Vector3();
+
+interface AmbientPlanetSpec {
+  id: string;
+  planetName: string;
+  color: string;
+  orbitRadius: number;
+  initialAngle: number;
+  orbitSpeed: number;
+  radius: number;
+  type: PlanetType;
+  tiltDeg: number;
+  hasRings?: boolean;
+}
+
+const AMBIENT_PLANETS: AmbientPlanetSpec[] = [
+  {
+    id: 'jupiter',
+    planetName: 'Júpiter',
+    color: '#d9a066',
+    orbitRadius: 18.2,
+    initialAngle: -1.15,
+    orbitSpeed: 0.024,
+    radius: 1.65,
+    type: 'jupiter',
+    tiltDeg: 3.1
+  },
+  {
+    id: 'saturn',
+    planetName: 'Saturno',
+    color: '#eab308',
+    orbitRadius: 23.4,
+    initialAngle: 0.85,
+    orbitSpeed: 0.017,
+    radius: 1.38,
+    type: 'saturn',
+    tiltDeg: 26.7,
+    hasRings: true
+  },
+  {
+    id: 'uranus',
+    planetName: 'Urano',
+    color: '#67e8f9',
+    orbitRadius: 27.8,
+    initialAngle: 2.55,
+    orbitSpeed: 0.012,
+    radius: 1.02,
+    type: 'uranus',
+    tiltDeg: 82.0,
+    hasRings: true
+  },
+  {
+    id: 'neptune',
+    planetName: 'Neptuno',
+    color: '#3b82f6',
+    orbitRadius: 31.8,
+    initialAngle: -2.25,
+    orbitSpeed: 0.009,
+    radius: 0.98,
+    type: 'neptune',
+    tiltDeg: 28.3
+  }
+];
 
 export const NODES_DATA: Node3DData[] = [
   {
@@ -204,7 +271,7 @@ function createPlanetTexture(type: PlanetType, maxAnisotropy: number): THREE.Can
     ctx.fillStyle = 'rgba(248, 250, 252, 0.9)';
     ctx.fillRect(0, 0, 512, 16);
     ctx.fillRect(0, 240, 512, 16);
-  } else {
+  } else if (type === 'mars') {
     // Mars
     const marsGrad = ctx.createLinearGradient(0, 0, 0, 256);
     marsGrad.addColorStop(0, '#b45309');
@@ -223,15 +290,121 @@ function createPlanetTexture(type: PlanetType, maxAnisotropy: number): THREE.Can
       ctx.fill();
     }
 
-    // Martian polar caps
     ctx.fillStyle = 'rgba(255, 247, 237, 0.85)';
     ctx.fillRect(0, 0, 512, 10);
     ctx.fillRect(0, 246, 512, 10);
+  } else if (type === 'jupiter') {
+    // Jupiter bands + Great Red Spot
+    const bands = [
+      '#d8c3a5',
+      '#b07d4f',
+      '#e9d8c4',
+      '#9c5a34',
+      '#d9b082',
+      '#7f4525',
+      '#e6d2b8',
+      '#b87a4b',
+      '#d2b48c'
+    ];
+    const bh = 256 / bands.length;
+    bands.forEach((c, idx) => {
+      ctx.fillStyle = c;
+      ctx.fillRect(0, idx * bh, 512, bh + 1);
+    });
+    for (let i = 0; i < 55; i++) {
+      const y = seededRand(i * 4.3) * 256;
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 248, 235, 0.16)' : 'rgba(120, 53, 15, 0.18)';
+      ctx.fillRect(0, y, 512, 3 + seededRand(i * 2.1) * 7);
+    }
+    // Great Red Spot
+    ctx.fillStyle = 'rgba(194, 65, 36, 0.82)';
+    ctx.beginPath();
+    ctx.ellipse(310, 158, 34, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(251, 191, 136, 0.55)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  } else if (type === 'saturn') {
+    const grad = ctx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0, '#bfa36f');
+    grad.addColorStop(0.25, '#e8d5a7');
+    grad.addColorStop(0.5, '#d4b475');
+    grad.addColorStop(0.75, '#efe0b9');
+    grad.addColorStop(1, '#a98c58');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 256);
+
+    for (let i = 0; i < 36; i++) {
+      const y = seededRand(i * 3.1) * 256;
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 250, 230, 0.18)' : 'rgba(146, 114, 62, 0.15)';
+      ctx.fillRect(0, y, 512, 4 + seededRand(i * 5.7) * 8);
+    }
+  } else if (type === 'uranus') {
+    const grad = ctx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0, '#67e8f9');
+    grad.addColorStop(0.5, '#a5f3fc');
+    grad.addColorStop(1, '#22d3ee');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 256);
+    for (let i = 0; i < 18; i++) {
+      const y = seededRand(i * 2.4) * 256;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.fillRect(0, y, 512, 6);
+    }
+  } else {
+    // Neptune
+    const grad = ctx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0, '#1d4ed8');
+    grad.addColorStop(0.4, '#2563eb');
+    grad.addColorStop(0.65, '#1e40af');
+    grad.addColorStop(1, '#1d4ed8');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 256);
+
+    for (let i = 0; i < 24; i++) {
+      const y = seededRand(i * 3.8) * 256;
+      ctx.fillStyle = i % 3 === 0 ? 'rgba(147, 197, 253, 0.22)' : 'rgba(30, 58, 138, 0.25)';
+      ctx.fillRect(0, y, 512, 4 + seededRand(i * 1.9) * 6);
+    }
   }
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
+  tex.anisotropy = maxAnisotropy;
+  return tex;
+}
+
+function createPlanetaryRingTexture(isIceRing: boolean, maxAnisotropy: number): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 16;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, 512, 16);
+
+  if (isIceRing) {
+    // Subtle Uranus ring
+    ctx.fillStyle = 'rgba(165, 243, 252, 0.35)';
+    ctx.fillRect(140, 0, 24, 16);
+    ctx.fillStyle = 'rgba(207, 250, 254, 0.5)';
+    ctx.fillRect(280, 0, 32, 16);
+  } else {
+    // Rich Saturn concentric rings with Cassini division
+    const grad = ctx.createLinearGradient(0, 0, 512, 0);
+    grad.addColorStop(0.0, 'rgba(212, 180, 117, 0.05)');
+    grad.addColorStop(0.15, 'rgba(232, 213, 167, 0.55)');
+    grad.addColorStop(0.45, 'rgba(245, 226, 178, 0.92)');
+    grad.addColorStop(0.62, 'rgba(212, 180, 117, 0.78)');
+    grad.addColorStop(0.67, 'rgba(20, 20, 20, 0.08)'); // Cassini division
+    grad.addColorStop(0.72, 'rgba(232, 213, 167, 0.75)');
+    grad.addColorStop(0.92, 'rgba(191, 163, 111, 0.45)');
+    grad.addColorStop(1.0, 'rgba(191, 163, 111, 0.0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 16);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = maxAnisotropy;
   return tex;
 }
@@ -302,7 +475,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
     prevPointerY: 0,
     orbitTheta: 0.35,
     orbitPhi: Math.PI / 3.1,
-    orbitRadius: 24,
+    orbitRadius: 34,
     hoveredNodeId: null as string | null
   });
 
@@ -348,15 +521,15 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
 
     // 3. Scene & Camera
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x040710, 0.012);
+    scene.fog = new THREE.FogExp2(0x040710, 0.0055);
 
     const camera = new THREE.PerspectiveCamera(
       45,
       container.clientWidth / container.clientHeight,
       0.1,
-      180
+      240
     );
-    camera.position.set(0, 9.5, 23);
+    camera.position.set(0, 11.8, 34);
 
     // 4. Environment Map
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -364,25 +537,25 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
     pmremGenerator.dispose();
 
     // 5. Solar System Lighting Rig
-    const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x05080f, 0.65);
+    const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x05080f, 0.75);
     scene.add(hemiLight);
 
     // Main sunlight radiating from the center
-    const sunLight = new THREE.PointLight(0xfff1d6, 4.5, 70, 0.6);
+    const sunLight = new THREE.PointLight(0xfff1d6, 5.2, 120, 0.35);
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
 
     // Gentle directional rim light so dark sides of planets stay subtly readable
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.85);
-    rimLight.position.set(-18, 12, -16);
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.9);
+    rimLight.position.set(-22, 14, -20);
     scene.add(rimLight);
 
     // 6. Calm Deep-Space Starfield (static Points, zero dizziness)
-    const starCount = 650;
+    const starCount = 750;
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount; i++) {
-      const r = 42 + seededRand(i * 1.9) * 55;
+      const r = 55 + seededRand(i * 1.9) * 70;
       const theta = seededRand(i * 3.7) * Math.PI * 2;
       const phi = Math.acos(2 * seededRand(i * 5.1) - 1);
       starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
@@ -617,6 +790,119 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       });
     });
 
+    // 8b. Asteroid Belt between Mars (13.4) and Jupiter (18.2) via InstancedMesh
+    const asteroidCount = 140;
+    const asteroidGeo = new THREE.DodecahedronGeometry(0.085, 0);
+    const asteroidMat = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      roughness: 0.9,
+      metalness: 0.1
+    });
+    const asteroidBelt = new THREE.InstancedMesh(asteroidGeo, asteroidMat, asteroidCount);
+    const asteroidGroup = new THREE.Group();
+    for (let i = 0; i < asteroidCount; i++) {
+      const aR = 15.1 + seededRand(i * 3.1) * 1.4;
+      const aAngle = (i / asteroidCount) * Math.PI * 2 + seededRand(i * 1.7) * 0.25;
+      const aY = (seededRand(i * 4.3) - 0.5) * 0.55;
+      _tempPos.set(Math.cos(aAngle) * aR, aY, Math.sin(aAngle) * aR);
+      _tempEuler.set(seededRand(i * 2.1) * 3, seededRand(i * 5.2) * 3, 0);
+      _tempQuat.setFromEuler(_tempEuler);
+      const s = 0.65 + seededRand(i * 6.7) * 0.9;
+      _tempScale.set(s, s * 0.8, s);
+      _tempMatrix.compose(_tempPos, _tempQuat, _tempScale);
+      asteroidBelt.setMatrixAt(i, _tempMatrix);
+    }
+    asteroidBelt.instanceMatrix.needsUpdate = true;
+    asteroidBelt.computeBoundingSphere();
+    asteroidGroup.add(asteroidBelt);
+    scene.add(asteroidGroup);
+    disposables.push(asteroidGeo, asteroidMat);
+
+    // 8c. Outer Ambient Planets (Jupiter, Saturn with rings, Uranus, Neptune)
+    const saturnRingTex = createPlanetaryRingTexture(false, maxAnisotropy);
+    const uranusRingTex = createPlanetaryRingTexture(true, maxAnisotropy);
+    disposables.push(saturnRingTex, uranusRingTex);
+
+    const ambientObjects: {
+      group: THREE.Group;
+      mesh: THREE.Mesh;
+      angle: number;
+      spec: AmbientPlanetSpec;
+    }[] = [];
+
+    AMBIENT_PLANETS.forEach((spec) => {
+      const orbitGeo = new THREE.RingGeometry(spec.orbitRadius - 0.025, spec.orbitRadius + 0.025, 144);
+      const orbitMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(spec.color),
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.16
+      });
+      const orbitMesh = new THREE.Mesh(orbitGeo, orbitMat);
+      orbitMesh.rotation.x = -Math.PI / 2;
+      scene.add(orbitMesh);
+      disposables.push(orbitGeo, orbitMat);
+
+      const pGroup = new THREE.Group();
+      pGroup.position.set(
+        Math.cos(spec.initialAngle) * spec.orbitRadius,
+        0,
+        Math.sin(spec.initialAngle) * spec.orbitRadius
+      );
+
+      const pTex = createPlanetTexture(spec.type, maxAnisotropy);
+      const pGeo = new THREE.SphereGeometry(spec.radius, 48, 36);
+      const pMat = new THREE.MeshStandardMaterial({
+        map: pTex,
+        roughness: 0.7,
+        metalness: 0.05,
+        emissive: new THREE.Color(spec.color),
+        emissiveIntensity: 0.06
+      });
+      const pMesh = new THREE.Mesh(pGeo, pMat);
+      pMesh.rotation.z = THREE.MathUtils.degToRad(spec.tiltDeg);
+      pGroup.add(pMesh);
+      disposables.push(pTex, pGeo, pMat);
+
+      if (spec.hasRings) {
+        const innerR = spec.radius * 1.35;
+        const outerR = spec.type === 'saturn' ? spec.radius * 2.45 : spec.radius * 1.85;
+        const ringGeo = new THREE.RingGeometry(innerR, outerR, 96);
+
+        // Remap RingGeometry UVs radially so concentric ring bands render crisply
+        const posAttr = ringGeo.attributes.position;
+        const uvAttr = ringGeo.attributes.uv;
+        for (let i = 0; i < posAttr.count; i++) {
+          const vx = posAttr.getX(i);
+          const vy = posAttr.getY(i);
+          const r = Math.hypot(vx, vy);
+          const u = (r - innerR) / (outerR - innerR);
+          uvAttr.setXY(i, u, 0.5);
+        }
+
+        const ringMat = new THREE.MeshStandardMaterial({
+          map: spec.type === 'saturn' ? saturnRingTex : uranusRingTex,
+          side: THREE.DoubleSide,
+          transparent: true,
+          roughness: 0.8,
+          depthWrite: false
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.rotation.x = Math.PI / 2;
+        ringMesh.rotation.y = THREE.MathUtils.degToRad(spec.tiltDeg);
+        pGroup.add(ringMesh);
+        disposables.push(ringGeo, ringMat);
+      }
+
+      scene.add(pGroup);
+      ambientObjects.push({
+        group: pGroup,
+        mesh: pMesh,
+        angle: spec.initialAngle,
+        spec
+      });
+    });
+
     // 9. Pointer & Orbit Interaction Handlers
     const onPointerMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
@@ -694,7 +980,7 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
         e.preventDefault();
         stateRef.current.orbitRadius = Math.max(
           10,
-          Math.min(42, stateRef.current.orbitRadius + e.deltaY * 0.025)
+          Math.min(64, stateRef.current.orbitRadius + e.deltaY * 0.03)
         );
       }
     };
@@ -805,6 +1091,24 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
         }
       });
 
+      // Outer ambient planets + asteroid belt serene revolution
+      if (current.isRotating) {
+        asteroidGroup.rotation.y += delta * 0.015;
+      }
+      ambientObjects.forEach((amb) => {
+        if (current.isRotating) {
+          amb.mesh.rotation.y += delta * 0.12;
+        }
+        if (shouldRevolve) {
+          amb.angle += delta * amb.spec.orbitSpeed;
+          amb.group.position.set(
+            Math.cos(amb.angle) * amb.spec.orbitRadius,
+            0,
+            Math.sin(amb.angle) * amb.spec.orbitRadius
+          );
+        }
+      });
+
       // Camera positioning
       if (current.viewMode === 'space3d') {
         if (current.activeNodeId) {
@@ -846,13 +1150,13 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
           _targetLookAt.set(0, 0.3, 0);
         }
       } else {
-        // Portal mode: position the Solar System in the upper-center open stage above the single card
+        // Portal mode: wide majestic framing showing the full Solar System above the card
         _targetCamPos.set(
           current.mouseX * 0.65,
-          8.4 - current.mouseY * 0.28,
-          25.0
+          11.8 - current.mouseY * 0.3,
+          34.0
         );
-        _targetLookAt.set(0, -2.9, 0);
+        _targetLookAt.set(0, -4.4, 0);
       }
 
       camera.position.x = THREE.MathUtils.damp(camera.position.x, _targetCamPos.x, 3.2, delta);
