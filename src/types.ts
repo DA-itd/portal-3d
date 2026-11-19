@@ -27,4 +27,5 @@ export interface Node3DData {
   description: string;
   actionUrl?: string;
   actionText?: string;
+  links?: { label: string; url: string }[];
 }
