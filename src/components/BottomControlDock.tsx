@@ -112,18 +112,34 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {activeNode.actionUrl && (
-                  <a
-                    href={activeNode.actionUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => sound.playSelect()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-xs font-bold font-rajdhani uppercase tracking-wider hover:bg-cyan-400 transition-colors cursor-pointer"
-                  >
-                    <span>{activeNode.actionText || 'Abrir Módulo'}</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+              <div className="flex flex-wrap items-center gap-2">
+                {activeNode.links && activeNode.links.length > 0 ? (
+                  activeNode.links.map((link) => (
+                    <a
+                      key={link.url}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => sound.playSelect()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-xs font-bold font-rajdhani uppercase tracking-wider hover:bg-cyan-400 transition-colors cursor-pointer"
+                    >
+                      <span>{link.label}</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  ))
+                ) : (
+                  activeNode.actionUrl && (
+                    <a
+                      href={activeNode.actionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => sound.playSelect()}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-xs font-bold font-rajdhani uppercase tracking-wider hover:bg-cyan-400 transition-colors cursor-pointer"
+                    >
+                      <span>{activeNode.actionText || 'Abrir Módulo'}</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )
                 )}
                 <button
                   onClick={() => {
